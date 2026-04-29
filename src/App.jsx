@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 
-const TEMPORADA_CHILE = `Estamos en otoño en Chile (abril-junio 2026). Frutas de temporada: manzanas, peras, uvas, kiwi, naranjas, mandarinas, membrillos, higos. Verduras de temporada: zapallo, zanahoria, betarraga, brócoli, coliflor, espinaca, acelga, choclo.`;
-
 const FILTROS = [
   { id: "todo", label: "Todo", icon: "🌿" },
   { id: "fruta", label: "Fruta", icon: "🍎" },
@@ -33,33 +31,41 @@ function ColacionCard({ colacion, onNueva, loading }) {
   if (!colacion) return null;
 
   const imgQuery = encodeURIComponent(
-    (colacion.nombre + " " + (colacion.ingredientes?.[0] || "") + " healthy kids snack").toLowerCase()
+    (colacion.nombre + " " + (colacion.ingredientes?.[0] || "") + " healthy kids snack food").toLowerCase()
   );
   const imgSrc = `https://source.unsplash.com/featured/600x300/?${imgQuery}`;
 
   return (
     <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 16, overflow: "hidden" }}>
-      {!imgError && (
-        <div style={{ width: "100%", height: 190, background: "#f3f4f6", position: "relative" }}>
+      {!imgError ? (
+        <div style={{ width: "100%", height: 200, background: "#f3f4f6", position: "relative" }}>
           <img src={imgSrc} alt={colacion.nombre} onError={() => setImgError(true)}
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           <div style={{
             position: "absolute", bottom: 0, left: 0, right: 0,
-            background: "linear-gradient(transparent, rgba(0,0,0,0.4))",
-            padding: "24px 12px 10px",
+            background: "linear-gradient(transparent, rgba(0,0,0,0.5))",
+            padding: "32px 14px 12px",
           }}>
-            <span style={{ fontSize: 22 }}>{colacion.emoji}</span>
+            <span style={{ fontSize: 24 }}>{colacion.emoji}</span>
           </div>
         </div>
+      ) : (
+        <div style={{
+          width: "100%", height: 100, background: "#f9fafb",
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48
+        }}>
+          {colacion.emoji}
+        </div>
       )}
+
       <div style={{ padding: "1.25rem" }}>
         <p style={{ fontSize: 11, color: "#9ca3af", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-          Colación del día
+          Colación sugerida
         </p>
-        <h2 style={{ fontSize: 20, fontWeight: 600, margin: "0 0 10px", color: "#111827" }}>
-          {imgError && <span style={{ marginRight: 8 }}>{colacion.emoji}</span>}
+        <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 10px", color: "#111827" }}>
           {colacion.nombre}
         </h2>
+
         {colacion.etiquetas && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
             {colacion.etiquetas.map(e => (
@@ -70,9 +76,11 @@ function ColacionCard({ colacion, onNueva, loading }) {
             ))}
           </div>
         )}
+
         <p style={{ fontSize: 14, color: "#6b7280", margin: "0 0 14px", lineHeight: 1.6 }}>
           {colacion.descripcion}
         </p>
+
         <div style={{ background: "#f9fafb", borderRadius: 10, padding: "12px", marginBottom: 14 }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
             Ingredientes
@@ -83,17 +91,20 @@ function ColacionCard({ colacion, onNueva, loading }) {
             ))}
           </ul>
         </div>
+
         <div style={{ marginBottom: 14 }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
             Preparación
           </p>
           <p style={{ fontSize: 14, color: "#111827", lineHeight: 1.6 }}>{colacion.preparacion}</p>
         </div>
+
         {colacion.consejo && (
           <div style={{ borderLeft: "3px solid #86efac", paddingLeft: 10, marginBottom: 18 }}>
             <p style={{ fontSize: 13, color: "#16a34a", lineHeight: 1.5 }}>💡 {colacion.consejo}</p>
           </div>
         )}
+
         <button onClick={onNueva} style={{
           width: "100%", padding: "12px", fontSize: 15, fontWeight: 500,
           borderRadius: 10, border: "1px solid #e5e7eb", background: "#f9fafb",
@@ -113,8 +124,10 @@ export default function App() {
   const [historial, setHistorial] = useState([]);
   const [vistaHistorial, setVistaHistorial] = useState(false);
   const [error, setError] = useState(null);
+  const [ingredientes, setIngredientes] = useState("");
+  const [mostrarIngredientes, setMostrarIngredientes] = useState(false);
 
-  async function obtenerColacion(filtroActual) {
+  async function obtenerColacion(filtroActual, ingredientesActuales) {
     setLoading(true);
     setError(null);
     setVistaHistorial(false);
@@ -125,9 +138,19 @@ export default function App() {
       ? `Ya sugeriste estas colaciones hoy, no las repitas: ${historial.join(", ")}.` : "";
     const filtroTexto = filtroActual !== "todo"
       ? `La colación debe ser principalmente de tipo: ${filtroActual}.` : "";
+    const ingredientesTexto = ingredientesActuales?.trim()
+      ? `IMPORTANTE: El papá o la mamá tiene estos ingredientes en casa ahora mismo: ${ingredientesActuales}. Usa SOLO estos ingredientes disponibles, no sugieras otros que no estén en esta lista.`
+      : "";
 
     const prompt = `Eres un nutricionista infantil experto. Sugiere UNA colación saludable para una niña chilena de 4 años.
-${TEMPORADA_CHILE}
+
+RESTRICCIONES OBLIGATORIAS:
+- NUNCA uses lácteos de vaca (sin leche de vaca, queso de vaca, yogur de vaca, mantequilla, crema). Puedes usar leche vegetal, leche de cabra u oveja si es necesario.
+- La colación debe ser apta para niños de 4 años (sin frutos secos enteros, sin alimentos muy duros).
+- Alimentación 100% saludable, sin azúcar refinada ni ultraprocesados.
+- Puedes sugerir cualquier alimento disponible en Chile sin importar la estación del año, ya que los supermercados importan productos de todo el mundo.
+
+${ingredientesTexto}
 ${filtroTexto}
 ${historialTexto}
 
@@ -141,7 +164,7 @@ Responde SOLO con un JSON válido, sin markdown ni texto adicional:
   "preparacion": "instrucciones simples para los papás, máximo 3-4 pasos en un párrafo",
   "consejo": "un consejo nutricional o de presentación para niños"
 }
-Etiquetas posibles: Fruta, Dulce, Salado, Rápido, Sin gluten, Proteína, Integral, Temporada.`;
+Etiquetas posibles: Fruta, Dulce, Salado, Rápido, Sin gluten, Proteína, Integral, Sin lácteos, Vegano.`;
 
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -161,7 +184,6 @@ Etiquetas posibles: Fruta, Dulce, Salado, Rápido, Sin gluten, Proteína, Integr
 
       if (!res.ok) {
         const errData = await res.json();
-        console.error("API Error:", res.status, errData);
         throw new Error(`Error ${res.status}: ${errData?.error?.message || "desconocido"}`);
       }
 
@@ -172,30 +194,84 @@ Etiquetas posibles: Fruta, Dulce, Salado, Rápido, Sin gluten, Proteína, Integr
       setColacion(parsed);
       setHistorial(prev => [...prev.slice(-9), parsed.nombre]);
     } catch (e) {
-      console.error("Error completo:", e);
       setError(`Error: ${e.message}`);
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { obtenerColacion("todo"); }, []);
+  useEffect(() => { obtenerColacion("todo", ""); }, []);
 
   function cambiarFiltro(f) {
     setFiltro(f);
-    obtenerColacion(f);
+    obtenerColacion(f, ingredientes);
+  }
+
+  function buscarConIngredientes() {
+    obtenerColacion(filtro, ingredientes);
+    setMostrarIngredientes(false);
   }
 
   return (
     <div style={{ width: "100%", maxWidth: 420, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
       <div style={{ marginBottom: 18 }}>
         <p style={{ fontSize: 11, color: "#9ca3af", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-          Otoño 2026 · Chile
+          Chile · Sin lácteos de vaca
         </p>
         <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: "#111827" }}>Colaciones saludables</h1>
         <p style={{ fontSize: 13, color: "#6b7280", margin: "4px 0 0" }}>Ideas para tu hija de 4 años 🧡</p>
       </div>
 
+      {/* Ingredientes en casa */}
+      <div style={{ marginBottom: 14 }}>
+        <button
+          onClick={() => setMostrarIngredientes(!mostrarIngredientes)}
+          style={{
+            width: "100%", padding: "10px 14px", fontSize: 13, cursor: "pointer",
+            background: ingredientes.trim() ? "#f0fdf4" : "#f9fafb",
+            color: ingredientes.trim() ? "#16a34a" : "#6b7280",
+            border: ingredientes.trim() ? "1px solid #86efac" : "1px solid #e5e7eb",
+            borderRadius: 10, textAlign: "left", fontWeight: 500,
+          }}>
+          🏠 {ingredientes.trim() ? `Ingredientes en casa: ${ingredientes.slice(0, 40)}${ingredientes.length > 40 ? "..." : ""}` : "¿Qué tienes en casa? (opcional)"}
+        </button>
+
+        {mostrarIngredientes && (
+          <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 10, padding: 14, marginTop: 6 }}>
+            <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 8px", lineHeight: 1.5 }}>
+              Escribe los alimentos que tienes disponibles ahora y la app sugerirá colaciones solo con esos ingredientes.
+            </p>
+            <textarea
+              value={ingredientes}
+              onChange={e => setIngredientes(e.target.value)}
+              placeholder="Ej: naranjas, manzanas, avena, huevos, pan integral, miel..."
+              style={{
+                width: "100%", minHeight: 80, padding: "10px", fontSize: 14,
+                border: "1px solid #e5e7eb", borderRadius: 8, resize: "vertical",
+                fontFamily: "inherit", color: "#111827", boxSizing: "border-box",
+              }}
+            />
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              <button onClick={buscarConIngredientes} style={{
+                flex: 1, padding: "10px", fontSize: 14, fontWeight: 600,
+                background: "#2563eb", color: "white", border: "none",
+                borderRadius: 8, cursor: "pointer",
+              }}>
+                Buscar colación 🔍
+              </button>
+              <button onClick={() => { setIngredientes(""); setMostrarIngredientes(false); obtenerColacion(filtro, ""); }}
+                style={{
+                  padding: "10px 14px", fontSize: 13, background: "#f9fafb",
+                  color: "#6b7280", border: "1px solid #e5e7eb", borderRadius: 8, cursor: "pointer",
+                }}>
+                Limpiar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Filtros */}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
         {FILTROS.map(f => (
           <button key={f.id} onClick={() => cambiarFiltro(f.id)} style={{
@@ -217,14 +293,14 @@ Etiquetas posibles: Fruta, Dulce, Salado, Rápido, Sin gluten, Proteína, Integr
       )}
 
       {!vistaHistorial && (
-        <ColacionCard colacion={colacion} onNueva={() => obtenerColacion(filtro)} loading={loading} />
+        <ColacionCard colacion={colacion} onNueva={() => obtenerColacion(filtro, ingredientes)} loading={loading} />
       )}
 
       {historial.length > 1 && !loading && (
         <div style={{ marginTop: 16 }}>
           <button onClick={() => setVistaHistorial(!vistaHistorial)}
             style={{ fontSize: 13, color: "#6b7280", border: "none", background: "none", padding: 0, cursor: "pointer" }}>
-            {vistaHistorial ? "← Volver" : `Ver historial del día (${historial.length - 1})`}
+            {vistaHistorial ? "← Volver" : `Ver historial (${historial.length - 1})`}
           </button>
           {vistaHistorial && (
             <div style={{ marginTop: 12 }}>
