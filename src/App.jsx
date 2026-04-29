@@ -31,9 +31,9 @@ function ColacionCard({ colacion, onNueva, loading }) {
   if (!colacion) return null;
 
   const imgQuery = encodeURIComponent(
-    (colacion.nombre + " " + (colacion.ingredientes?.[0] || "") + " healthy kids snack food").toLowerCase()
+    (colacion.nombre + " " + (colacion.ingredientes?.[0] || "") + " kids snack food plate").toLowerCase()
   );
-  const imgSrc = `https://source.unsplash.com/featured/600x300/?${imgQuery}`;
+  const imgSrc = `https://loremflickr.com/600/300/${imgQuery}`;
 
   return (
     <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 16, overflow: "hidden" }}>
