@@ -9,14 +9,34 @@ const FILTROS = [
 ];
 
 function ColacionCard({ colacion, onNueva, loading }) {
-  const [imgError, setImgError] = useState(false);
-  useEffect(() => { setImgError(false); }, [colacion]);
+  const [imgSrc, setImgSrc] = useState(null);
+  const [imgLoading, setImgLoading] = useState(false);
+
+  useEffect(() => {
+    if (!colacion) return;
+    setImgSrc(null);
+    setImgLoading(true);
+    const pexelsKey = import.meta.env.VITE_PEXELS_API_KEY;
+    const q = encodeURIComponent(
+      (colacion.nombre + " " + (colacion.ingredientes?.[0] || "") + " food snack").toLowerCase()
+    );
+    fetch(`https://api.pexels.com/v1/search?query=${q}&per_page=1&orientation=landscape`, {
+      headers: { Authorization: pexelsKey },
+    })
+      .then(r => r.json())
+      .then(d => {
+        const url = d?.photos?.[0]?.src?.large;
+        setImgSrc(url || null);
+      })
+      .catch(() => setImgSrc(null))
+      .finally(() => setImgLoading(false));
+  }, [colacion]);
 
   if (loading) {
     return (
       <div style={{
-        background: "#ffffff", border: "1px solid #e5e7eb",
-        borderRadius: 16, padding: "2rem 1.25rem", minHeight: 220,
+        background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 16,
+        padding: "2rem 1.25rem", minHeight: 220,
         display: "flex", flexDirection: "column",
         alignItems: "center", justifyContent: "center", gap: 12,
       }}>
@@ -30,45 +50,29 @@ function ColacionCard({ colacion, onNueva, loading }) {
 
   if (!colacion) return null;
 
-  const [imgSrc, setImgSrc] = useState(null);
-  useEffect(() => {
-    if (!colacion) return;
-    const pexelsKey = import.meta.env.VITE_PEXELS_API_KEY;
-    const q = encodeURIComponent(colacion.nombre + " " + (colacion.ingredientes?.[0] || "") + " food kids");
-    fetch(`https://api.pexels.com/v1/search?query=${q}&per_page=1&orientation=landscape`, {
-      headers: { Authorization: pexelsKey }
-    })
-      .then(r => r.json())
-      .then(d => {
-        const url = d?.photos?.[0]?.src?.large;
-        if (url) setImgSrc(url);
-        else setImgError(true);
-      })
-      .catch(() => setImgError(true));
-  }, [colacion]);
-
   return (
     <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 16, overflow: "hidden" }}>
-      {!imgError ? (
-        <div style={{ width: "100%", height: 200, background: "#f3f4f6", position: "relative" }}>
-          <img src={imgSrc} alt={colacion.nombre} onError={() => setImgError(true)}
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          <div style={{
-            position: "absolute", bottom: 0, left: 0, right: 0,
-            background: "linear-gradient(transparent, rgba(0,0,0,0.5))",
-            padding: "32px 14px 12px",
-          }}>
-            <span style={{ fontSize: 24 }}>{colacion.emoji}</span>
-          </div>
-        </div>
-      ) : (
+
+      {/* Imagen */}
+      <div style={{ width: "100%", height: 200, background: "#f3f4f6", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {imgLoading && (
+          <p style={{ color: "#9ca3af", fontSize: 13 }}>Cargando foto...</p>
+        )}
+        {!imgLoading && imgSrc && (
+          <img src={imgSrc} alt={colacion.nombre}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", position: "absolute", top: 0, left: 0 }} />
+        )}
+        {!imgLoading && !imgSrc && (
+          <span style={{ fontSize: 56 }}>{colacion.emoji}</span>
+        )}
         <div style={{
-          width: "100%", height: 100, background: "#f9fafb",
-          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48
+          position: "absolute", bottom: 0, left: 0, right: 0,
+          background: "linear-gradient(transparent, rgba(0,0,0,0.45))",
+          padding: "32px 14px 12px", pointerEvents: "none",
         }}>
-          {colacion.emoji}
+          <span style={{ fontSize: 22 }}>{colacion.emoji}</span>
         </div>
-      )}
+      </div>
 
       <div style={{ padding: "1.25rem" }}>
         <p style={{ fontSize: 11, color: "#9ca3af", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -145,38 +149,37 @@ export default function App() {
     setVistaHistorial(false);
 
     const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-
     const historialTexto = historial.length > 0
       ? `Ya sugeriste estas colaciones hoy, no las repitas: ${historial.join(", ")}.` : "";
     const filtroTexto = filtroActual !== "todo"
       ? `La colación debe ser principalmente de tipo: ${filtroActual}.` : "";
     const ingredientesTexto = ingredientesActuales?.trim()
-      ? `IMPORTANTE: El papá o la mamá tiene estos ingredientes en casa ahora mismo: ${ingredientesActuales}. Usa SOLO estos ingredientes disponibles, no sugieras otros que no estén en esta lista.`
+      ? `IMPORTANTE: El papá o la mamá tiene estos ingredientes en casa ahora mismo: ${ingredientesActuales}. Usa SOLO estos ingredientes disponibles.`
       : "";
 
     const prompt = `Eres un nutricionista infantil experto. Sugiere UNA colación saludable para una niña chilena de 4 años.
 
 RESTRICCIONES OBLIGATORIAS:
-- NUNCA uses lácteos de vaca (sin leche de vaca, queso de vaca, yogur de vaca, mantequilla, crema). Puedes usar leche vegetal, leche de cabra u oveja si es necesario.
-- La colación debe ser apta para niños de 4 años (sin frutos secos enteros, sin alimentos muy duros).
-- Alimentación 100% saludable, sin azúcar refinada ni ultraprocesados.
-- Puedes sugerir cualquier alimento disponible en Chile sin importar la estación del año, ya que los supermercados importan productos de todo el mundo.
+- NUNCA uses lácteos de vaca (sin leche de vaca, queso de vaca, yogur de vaca, mantequilla, crema).
+- Puedes usar leche vegetal o de cabra si es necesario.
+- Apta para niños de 4 años (sin frutos secos enteros, sin alimentos muy duros).
+- 100% saludable, sin azúcar refinada ni ultraprocesados.
+- Puedes sugerir cualquier alimento disponible en Chile sin importar la estación.
 
 ${ingredientesTexto}
 ${filtroTexto}
 ${historialTexto}
 
-Responde SOLO con un JSON válido, sin markdown ni texto adicional:
+Responde SOLO con JSON válido, sin markdown ni texto adicional:
 {
   "nombre": "nombre corto y atractivo",
   "emoji": "un emoji representativo",
   "etiquetas": ["etiqueta1", "etiqueta2"],
   "descripcion": "descripción breve y apetitosa en 1-2 oraciones",
   "ingredientes": ["ingrediente 1", "ingrediente 2", "ingrediente 3"],
-  "preparacion": "instrucciones simples para los papás, máximo 3-4 pasos en un párrafo",
+  "preparacion": "instrucciones simples para los papás en un párrafo",
   "consejo": "un consejo nutricional o de presentación para niños"
-}
-Etiquetas posibles: Fruta, Dulce, Salado, Rápido, Sin gluten, Proteína, Integral, Sin lácteos, Vegano.`;
+}`;
 
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -234,24 +237,21 @@ Etiquetas posibles: Fruta, Dulce, Salado, Rápido, Sin gluten, Proteína, Integr
         <p style={{ fontSize: 13, color: "#6b7280", margin: "4px 0 0" }}>Ideas para tu hija de 4 años 🧡</p>
       </div>
 
-      {/* Ingredientes en casa */}
       <div style={{ marginBottom: 14 }}>
-        <button
-          onClick={() => setMostrarIngredientes(!mostrarIngredientes)}
-          style={{
-            width: "100%", padding: "10px 14px", fontSize: 13, cursor: "pointer",
-            background: ingredientes.trim() ? "#f0fdf4" : "#f9fafb",
-            color: ingredientes.trim() ? "#16a34a" : "#6b7280",
-            border: ingredientes.trim() ? "1px solid #86efac" : "1px solid #e5e7eb",
-            borderRadius: 10, textAlign: "left", fontWeight: 500,
-          }}>
-          🏠 {ingredientes.trim() ? `Ingredientes en casa: ${ingredientes.slice(0, 40)}${ingredientes.length > 40 ? "..." : ""}` : "¿Qué tienes en casa? (opcional)"}
+        <button onClick={() => setMostrarIngredientes(!mostrarIngredientes)} style={{
+          width: "100%", padding: "10px 14px", fontSize: 13, cursor: "pointer",
+          background: ingredientes.trim() ? "#f0fdf4" : "#f9fafb",
+          color: ingredientes.trim() ? "#16a34a" : "#6b7280",
+          border: ingredientes.trim() ? "1px solid #86efac" : "1px solid #e5e7eb",
+          borderRadius: 10, textAlign: "left", fontWeight: 500,
+        }}>
+          🏠 {ingredientes.trim() ? `En casa: ${ingredientes.slice(0, 40)}${ingredientes.length > 40 ? "..." : ""}` : "¿Qué tienes en casa? (opcional)"}
         </button>
 
         {mostrarIngredientes && (
           <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 10, padding: 14, marginTop: 6 }}>
             <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 8px", lineHeight: 1.5 }}>
-              Escribe los alimentos que tienes disponibles ahora y la app sugerirá colaciones solo con esos ingredientes.
+              Escribe los alimentos que tienes ahora y la app sugerirá colaciones solo con esos ingredientes.
             </p>
             <textarea
               value={ingredientes}
@@ -271,11 +271,10 @@ Etiquetas posibles: Fruta, Dulce, Salado, Rápido, Sin gluten, Proteína, Integr
               }}>
                 Buscar colación 🔍
               </button>
-              <button onClick={() => { setIngredientes(""); setMostrarIngredientes(false); obtenerColacion(filtro, ""); }}
-                style={{
-                  padding: "10px 14px", fontSize: 13, background: "#f9fafb",
-                  color: "#6b7280", border: "1px solid #e5e7eb", borderRadius: 8, cursor: "pointer",
-                }}>
+              <button onClick={() => { setIngredientes(""); setMostrarIngredientes(false); obtenerColacion(filtro, ""); }} style={{
+                padding: "10px 14px", fontSize: 13, background: "#f9fafb",
+                color: "#6b7280", border: "1px solid #e5e7eb", borderRadius: 8, cursor: "pointer",
+              }}>
                 Limpiar
               </button>
             </div>
@@ -283,7 +282,6 @@ Etiquetas posibles: Fruta, Dulce, Salado, Rápido, Sin gluten, Proteína, Integr
         )}
       </div>
 
-      {/* Filtros */}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
         {FILTROS.map(f => (
           <button key={f.id} onClick={() => cambiarFiltro(f.id)} style={{
