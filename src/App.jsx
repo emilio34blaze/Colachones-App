@@ -30,10 +30,22 @@ function ColacionCard({ colacion, onNueva, loading }) {
 
   if (!colacion) return null;
 
-  const imgQuery = encodeURIComponent(
-    (colacion.nombre + " " + (colacion.ingredientes?.[0] || "") + " kids snack food plate").toLowerCase()
-  );
-  const imgSrc = `https://loremflickr.com/600/300/${imgQuery}`;
+  const [imgSrc, setImgSrc] = useState(null);
+  useEffect(() => {
+    if (!colacion) return;
+    const pexelsKey = import.meta.env.VITE_PEXELS_API_KEY;
+    const q = encodeURIComponent(colacion.nombre + " " + (colacion.ingredientes?.[0] || "") + " food kids");
+    fetch(`https://api.pexels.com/v1/search?query=${q}&per_page=1&orientation=landscape`, {
+      headers: { Authorization: pexelsKey }
+    })
+      .then(r => r.json())
+      .then(d => {
+        const url = d?.photos?.[0]?.src?.large;
+        if (url) setImgSrc(url);
+        else setImgError(true);
+      })
+      .catch(() => setImgError(true));
+  }, [colacion]);
 
   return (
     <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 16, overflow: "hidden" }}>
