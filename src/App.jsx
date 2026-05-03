@@ -18,7 +18,7 @@ function ColacionCard({ colacion, onNueva, loading }) {
     setImgLoading(true);
     const pexelsKey = import.meta.env.VITE_PEXELS_API_KEY;
     const q = encodeURIComponent(
-      (colacion.ingredientes?.slice(0, 2).join(" ") + " healthy food plate kids").toLowerCase()
+      (colacion.foto_busqueda || colacion.ingredientes?.slice(0, 2).join(" ") + " food plate").toLowerCase()
     );
     fetch(`https://api.pexels.com/v1/search?query=${q}&per_page=1&orientation=landscape`, {
       headers: { Authorization: pexelsKey },
@@ -178,7 +178,8 @@ Responde SOLO con JSON válido, sin markdown ni texto adicional:
   "descripcion": "descripción breve y apetitosa en 1-2 oraciones",
   "ingredientes": ["ingrediente 1", "ingrediente 2", "ingrediente 3"],
   "preparacion": "instrucciones simples para los papás en un párrafo",
-  "consejo": "un consejo nutricional o de presentación para niños"
+  "consejo": "un consejo nutricional o de presentación para niños",
+  "foto_busqueda": "3 keywords in English to search a photo of this snack on a plate, example: banana slices peanut butter plate"
 }`;
 
     try {
