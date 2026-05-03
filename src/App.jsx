@@ -18,7 +18,7 @@ function ColacionCard({ colacion, onNueva, loading }) {
     setImgLoading(true);
     const pexelsKey = import.meta.env.VITE_PEXELS_API_KEY;
     const q = encodeURIComponent(
-      (colacion.nombre + " " + (colacion.ingredientes?.[0] || "") + " food snack").toLowerCase()
+      (colacion.ingredientes?.slice(0, 2).join(" ") + " healthy food plate kids").toLowerCase()
     );
     fetch(`https://api.pexels.com/v1/search?query=${q}&per_page=1&orientation=landscape`, {
       headers: { Authorization: pexelsKey },
